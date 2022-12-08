@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
+#include "DamageInterface.h"
 #include "ExplorerCharacter.generated.h"
 
 class UInputComponent;
@@ -15,7 +16,7 @@ class UAnimMontage;
 class USoundBase;
 
 UCLASS(config=Game)
-class AExplorerCharacter : public ACharacter
+class AExplorerCharacter : public ACharacter, public IDamageInterface 
 {
 	GENERATED_BODY()
 
@@ -58,11 +59,15 @@ public:
 
 	/** Setter to set the bool */
 	UFUNCTION(BlueprintCallable, Category = Weapon)
-	void SetHasRifle(bool bNewHasRifle);
+	void SetHasRifle(bool bNewHasRifle, class UTP_WeaponComponent* weapon);
 
 	/** Getter for the bool */
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	bool GetHasRifle();
+
+	/** Getter for the currently equipped weapon */
+	UFUNCTION(BlueprintCallable, Category = Weapon)
+	class UTP_WeaponComponent* GetEquippedWeapon() { return equippedWeapon; };
 
 protected:
 	/** Called for movement input */
@@ -75,6 +80,8 @@ protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 	// End of APawn interface
+
+	class UTP_WeaponComponent* equippedWeapon = nullptr;
 
 public:
 	/** Returns Mesh1P subobject **/

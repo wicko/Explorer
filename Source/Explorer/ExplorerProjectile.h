@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "DamageInterface.h"
 #include "ExplorerProjectile.generated.h"
 
 class USphereComponent;
@@ -14,6 +15,7 @@ class AExplorerProjectile : public AActor
 {
 	GENERATED_BODY()
 
+public:
 	/** Sphere collision component */
 	UPROPERTY(VisibleDefaultsOnly, Category=Projectile)
 	USphereComponent* CollisionComp;
@@ -22,7 +24,14 @@ class AExplorerProjectile : public AActor
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
 	UProjectileMovementComponent* ProjectileMovement;
 
-public:
+	/** whether or not the projectile continues after colliding */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool canBounce = false;
+
+	/** the damage package associated with this projectile */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FDamagePackage dmgPack = FDamagePackage();
+
 	AExplorerProjectile();
 
 	/** called when projectile hits something */

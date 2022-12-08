@@ -4,6 +4,7 @@
 #include "ExplorerProjectile.h"
 #include "Animation/AnimInstance.h"
 #include "Camera/CameraComponent.h"
+#include "TP_WeaponComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -99,9 +100,10 @@ void AExplorerCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
-void AExplorerCharacter::SetHasRifle(bool bNewHasRifle)
+void AExplorerCharacter::SetHasRifle(bool bNewHasRifle, UTP_WeaponComponent* weapon)
 {
 	bHasRifle = bNewHasRifle;
+	equippedWeapon = weapon;
 }
 
 bool AExplorerCharacter::GetHasRifle()
