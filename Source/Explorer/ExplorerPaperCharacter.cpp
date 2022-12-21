@@ -3,6 +3,8 @@
 
 #include "ExplorerPaperCharacter.h"
 #include "DamagePopupActor.h"
+#include "ExplorerCharacter.h"
+#include "NpcController.h"
 #include "Runtime/Engine/Classes/Kismet/GameplayStatics.h"
 
 AExplorerPaperCharacter::AExplorerPaperCharacter()
@@ -32,7 +34,8 @@ AExplorerPaperCharacter::AExplorerPaperCharacter()
 	rArmLimb->AttachToComponent(GetSprite(), FAttachmentTransformRules::KeepWorldTransform);
 	spriteLimbs.Add(rArmLimb);
 
-
+	debugTextComponent = CreateDefaultSubobject<UTextRenderComponent>("DebugText");
+	debugTextComponent->AttachToComponent(GetSprite(), FAttachmentTransformRules::KeepWorldTransform);
 
 	PlayerSensingComp = CreateDefaultSubobject<UPawnSensingComponent>("PawnSensingComp");
 	PlayerSensingComp->SetPeripheralVisionAngle(60.0f);
@@ -51,7 +54,21 @@ void AExplorerPaperCharacter::BeginPlay()
 	Super::BeginPlay();
 	APlayerController* controller = GetWorld()->GetFirstPlayerController();
 	playerCamera = controller->PlayerCameraManager;
+
+	if (PlayerSensingComp)
+	{
+		PlayerSensingComp->OnSeePawn.AddDynamic(this, &AExplorerPaperCharacter::BehaviorOnSeePlayer);
+		PlayerSensingComp->OnHearNoise.AddDynamic(this, &AExplorerPaperCharacter::BehaviorOnHearNoise);
+	}
+	ChangeAIStateText(FText());
 }
+
+void AExplorerPaperCharacter::ChangeAIStateText(FText newText)
+{
+	FString text = FString("Health: ");
+	text.AppendInt(currentHealth);
+	debugTextComponent->SetText(FText().FromString(text));
+};
 
 void AExplorerPaperCharacter::OnDamageHit(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
@@ -74,16 +91,17 @@ void AExplorerPaperCharacter::ReactToDamage_Implementation(FDamagePackage damage
 			hitLimb->DestroyComponent();
 		}
 	}
-	baseHealth = baseHealth - damagePackage.damage;
+	currentHealth = currentHealth - damagePackage.damage;
 
 	//create damage pop up object and run it
 	ADamagePopupActor* damagePopup = GetWorld()->SpawnActorDeferred<ADamagePopupActor>(ADamagePopupActor::StaticClass(), FTransform(), GetWorld()->GetFirstPlayerController());
 	damagePopup->incDamage = damagePackage;
 	damagePopup->spawnLoc = damagePackage.hitVector;
 	damagePopup->spawnRotate = FRotator(0.0f, playerCamera->GetCameraRotation().Yaw + 180, 0.0f);
+	damagePopup->sourceCamera = playerCamera;
 	UGameplayStatics::FinishSpawningActor(damagePopup, FTransform());
-
-	if (baseHealth <= 0)
+	ChangeAIStateText(FText());
+	if (currentHealth <= 0)
 	{
 		Destroy();
 	}
@@ -101,8 +119,53 @@ void AExplorerPaperCharacter::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	if (playerCamera)
 	{
-		GetSprite()->SetWorldRotation(FRotator(0.0f, playerCamera->GetCameraRotation().Yaw + 90, 0.0f));
+		spriteRotation = FRotator(0.0f, playerCamera->GetCameraRotation().Yaw + 90, 0.0f);
+		GetSprite()->SetWorldRotation(spriteRotation);
 	}
+	if (hasSensedTarget)
+	{
+		if (target) {
+			if (!isInCombat)
+			{
+				if (!PlayerSensingComp->CouldSeePawn(target))
+				{
+					currentAggroTimer = 0;
+				}
+				else
+				{
+					currentAggroTimer += DeltaTime;
+				}
+			}
+			if ((GetWorld()->TimeSeconds - lastSeenTime) > ResetAggro
+				&& (GetWorld()->TimeSeconds - lastHeardTime) > ResetAggro) {
+				ANpcController* controller = this->GetController<ANpcController>();
+				if (controller)
+				{
+					hasSensedTarget = false;
+					isInCombat = false;
+					/* Reset */
+					controller->SetEnemyTarget(nullptr);
+					controller->SetBlackBoardBehaveType(EStateAI::AI_IDLE);
+					/* Stop playing the hunting sound */
+					//BroadcastUpdateAudioLoop(false);
+				}
+			}
+			/*
+			if (isSprinting && (target->GetActorLocation() - this->GetActorLocation()).Size() < switchToWalkDistance)
+			{
+				isSprinting = false;
+				this->GetCharacterMovement()->MaxWalkSpeed = walkSpeed;
+			}
+			else if (!isSprinting && (target->GetActorLocation() - this->GetActorLocation()).Size() >= switchToWalkDistance)
+			{
+				isSprinting = true;
+				this->GetCharacterMovement()->MaxWalkSpeed = sprintSpeed;
+			}
+			*/
+		}
+	}
+
+
 }
 
 // Called to bind functionality to input
@@ -112,6 +175,47 @@ void AExplorerPaperCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 
 }
 
+void AExplorerPaperCharacter::BehaviorOnHearNoise(APawn* PawnInstigator, const FVector& Location, float Volume)
+{
+	hasSensedTarget = true;
+	lastHeardTime = GetWorld()->GetTimeSeconds();
+	alertLocation = Location;
+	ANpcController* controller = this->GetController<ANpcController>();
+	if (controller)
+	{
+		controller->SetBlackBoardAlertLocationType(Location);
+	}
+}
+
+void AExplorerPaperCharacter::BehaviorOnSeePlayer(APawn* Pawn)
+{
+	hasSensedTarget = true;
+	lastSeenTime = GetWorld()->GetTimeSeconds();
+	//if the enemy already has the target as their focus, return
+	if (isInCombat)
+	{
+		return;
+	}
+
+	//if the enemy is within their instant aggro range, they will target them. Otherise, countdown the aggro timer since last seeing them
+
+	if (Cast<AExplorerCharacter>(Pawn))
+	{
+		target = Cast<AExplorerCharacter>(Pawn);
+	}
+
+	if (currentAggroTimer >= aggroTimer || (Pawn->GetActorLocation() - this->GetActorLocation()).Size() < aggroDistance)
+	{
+		ANpcController* controller = this->GetController<ANpcController>();
+		if (controller)
+		{
+			UE_LOG(LogTemp, Log, TEXT("Enemy has entered combat"));
+			isInCombat = true;
+			controller->SetEnemyTarget(target);
+			controller->SetBlackBoardBehaveType(EStateAI::AI_COMBAT);
+		}
+	}
+}
 
 void AExplorerPaperCharacter::UpdateAnimation()
 {

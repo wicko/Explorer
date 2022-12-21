@@ -33,6 +33,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FVector2D drawSize = FVector2D(30, 30);
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class APlayerCameraManager* sourceCamera = nullptr;
+
 	UFUNCTION()
 	void CreateDamagePopup(FDamagePackage damagePack, FVector target, FRotator rotation);
 
@@ -45,6 +48,7 @@ private:
 	float currentLife = 0.0f;
 	TSubclassOf<class UDisplayTextWidget> DamagePopUpClass;
 	class UDisplayTextWidget* popUpWidget = nullptr;
+	class APlayerCameraManager* camera = nullptr;
 
 public:	
 	// Called every frame

@@ -12,7 +12,10 @@ ADamagePopupActor::ADamagePopupActor()
 	static ConstructorHelpers::FClassFinder<UDisplayTextWidget> BP_DmgPopUp(TEXT("/Game/UI/DamagePopUp_UMG"));
 
 	widgetComp = CreateDefaultSubobject<UWidgetComponent>(FName("Damage Popup Widget"));
-	widgetComp->SetDrawSize(drawSize);
+	//widgetComp->SetDrawSize(drawSize);
+	//widgetComp->SetRenderCustomDepth(true);
+	widgetComp->SetRenderInDepthPass(false);
+	//widgetComp->SetDepthPriorityGroup(ESceneDepthPriorityGroup::SDPG_MAX);
 	DamagePopUpClass = BP_DmgPopUp.Class;
 
 	RootComponent = widgetComp;
@@ -28,6 +31,7 @@ void ADamagePopupActor::CreateDamagePopup(FDamagePackage damagePack, FVector tar
 	widgetComp->SetWidget(popUpWidget);
 	this->SetActorLocation(target);
 	this->SetActorRotation(rotation);
+	this->widgetComp->SetCastShadow(false);
 	popUpWidget->ApplyDamagePopup(damagePack);
 
 }
@@ -44,6 +48,13 @@ void ADamagePopupActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	currentLife = currentLife + DeltaTime;
+	this->AddActorLocalOffset(FVector(0.0f, 0.0f, 0.15f));
+	//widgetComp->SetTintColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f - (currentLife / lifetime)));
+	if (sourceCamera)
+	{
+		this->SetActorRotation(FRotator(0.0f, sourceCamera->GetCameraRotation().Yaw + 180, 0.0f));
+	}
+	widgetComp->GetWidget()->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f - (currentLife/ lifetime)));
 	if (currentLife > lifetime)
 	{
 		this->Destroy();
