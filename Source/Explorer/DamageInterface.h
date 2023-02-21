@@ -20,7 +20,7 @@ enum class EDamageForm : uint8
 
 //List of special damage modifiers
 UENUM(BlueprintType)
-enum class EDamageType : uint8
+enum class EWepDamageType : uint8
 {
 	DT_BLUNT			UMETA(DisplayName = "Blunt"),
 	DT_PIERCING			UMETA(DisplayName = "Piercing"),
@@ -41,7 +41,7 @@ struct FDamagePackage
 
 	/** Damage Type tied to the damage */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		EDamageType damageTypes = EDamageType::DT_BLUNT;
+		EWepDamageType damageTypes = EWepDamageType::DT_BLUNT;
 
 	/** the form the damage came in (eg radial, point, dot, etc)*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

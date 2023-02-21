@@ -4,7 +4,7 @@
 #include "ExplorerProjectile.h"
 #include "Animation/AnimInstance.h"
 #include "Camera/CameraComponent.h"
-#include "TP_WeaponComponent.h"
+#include "WeaponDataAsset.h"
 #include "Components/CapsuleComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -26,15 +26,11 @@ AExplorerCharacter::AExplorerCharacter()
 	FirstPersonCameraComponent->SetupAttachment(GetCapsuleComponent());
 	FirstPersonCameraComponent->SetRelativeLocation(FVector(-10.f, 0.f, 60.f)); // Position the camera
 	FirstPersonCameraComponent->bUsePawnControlRotation = true;
+	GetSprite()->SetupAttachment(FirstPersonCameraComponent);
+	weaponAnchor = CreateDefaultSubobject<USceneComponent>(TEXT("WeaponAnchor"));
+	weaponAnchor->SetupAttachment(FirstPersonCameraComponent);
 
-	// Create a mesh component that will be used when being viewed from a '1st person' view (when controlling this pawn)
-	Mesh1P = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CharacterMesh1P"));
-	Mesh1P->SetOnlyOwnerSee(true);
-	Mesh1P->SetupAttachment(FirstPersonCameraComponent);
-	Mesh1P->bCastDynamicShadow = false;
-	Mesh1P->CastShadow = false;
-	//Mesh1P->SetRelativeRotation(FRotator(0.9f, -19.19f, 5.2f));
-	Mesh1P->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
+
 
 }
 
@@ -100,6 +96,18 @@ void AExplorerCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
+void AExplorerCharacter::SwapWeapons(FWeapon newWeapon)
+{
+	if (equippedWeapon)
+	{
+		equippedWeapon->DestroyComponent();
+	}
+	equippedWeapon = NewObject<UTP_WeaponComponent>(this, newWeapon.weapon);
+	equippedWeapon->RegisterComponent();
+	equippedWeapon->SetRelativeScale3D(FVector(0.1f, 0.1f, 0.1f));
+	equippedWeapon->AttachWeapon(this);
+}
+
 void AExplorerCharacter::SetHasRifle(bool bNewHasRifle, UTP_WeaponComponent* weapon)
 {
 	bHasRifle = bNewHasRifle;
@@ -109,4 +117,60 @@ void AExplorerCharacter::SetHasRifle(bool bNewHasRifle, UTP_WeaponComponent* wea
 bool AExplorerCharacter::GetHasRifle()
 {
 	return bHasRifle;
+}
+bool AExplorerCharacter::HasWeapon(FWeapon newWeapon)
+{
+	for (FWeapon weapon : weaponInventory)
+	{
+		if (newWeapon.name == weapon.name)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool AExplorerCharacter::CollectAmmo(FWeaponAmmo ammo, int32 ammoNum)
+{
+	for (FWeapon weapon : weaponInventory)
+	{
+		if (ammo.name == weapon.ammo.name)
+		{
+			if (weapon.currentAmmo >= weapon.maxAmmo)
+			{
+				return false;
+			}
+			else
+			{
+				weapon.currentAmmo = FMath::Clamp(weapon.currentAmmo + ammoNum, 0, weapon.maxAmmo);
+				return true;
+			}
+		
+		}
+	}
+	return false;
+}
+
+bool AExplorerCharacter::InteractWithPickup(APickupActor* pickup)
+{
+	if (pickup->pickUpData.PickUpTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Pickup.Weapon"))))
+	{
+		if (!HasWeapon(pickup->weaponType->weaponData))
+		{
+			FWeapon newWeapon = FWeapon();
+			newWeapon.weapon = pickup->weaponType->weaponData.weapon;
+			newWeapon.currentAmmo = pickup->pickUpData.amount;
+			weaponInventory.Add(newWeapon);
+			SwapWeapons(newWeapon);
+		}
+		else
+		{
+			return CollectAmmo(pickup->weaponType->weaponData.ammo, pickup->pickUpData.amount);
+		}
+	}
+	else if (pickup->pickUpData.PickUpTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Pickup.Ammo"))))
+	{
+		return CollectAmmo(pickup->weaponType->weaponData.ammo, pickup->pickUpData.amount);
+	}
+	return true;
 }

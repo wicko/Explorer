@@ -14,7 +14,8 @@
 UTP_WeaponComponent::UTP_WeaponComponent()
 {
 	// Default offset from the character location for projectiles to spawn
-	MuzzleOffset = FVector(100.0f, 0.0f, 10.0f);
+	MuzzleOffset = FVector(50.0f, 0.0f, 5.0f);
+	
 }
 
 
@@ -52,14 +53,17 @@ void UTP_WeaponComponent::Fire()
 	}
 	
 	// Try and play a firing animation if specified
-	if (FireAnimation != nullptr)
+	if (firingAnim != nullptr)
 	{
+		this->SetFlipbook(firingAnim);
+		this->PlayFromStart();
+		this->SetLooping(false);
 		// Get the animation object for the arms mesh
-		UAnimInstance* AnimInstance = Character->GetMesh1P()->GetAnimInstance();
-		if (AnimInstance != nullptr)
-		{
-			AnimInstance->Montage_Play(FireAnimation, 1.f);
-		}
+	//	UAnimInstance* AnimInstance = Character->GetMesh1P()->GetAnimInstance();
+	//	if (AnimInstance != nullptr)
+	//	{
+	//		AnimInstance->Montage_Play(FireAnimation, 1.f);
+	//	}
 	}
 }
 
@@ -76,7 +80,7 @@ void UTP_WeaponComponent::AttachWeapon(AExplorerCharacter* TargetCharacter)
 	}
 	// Attach the weapon to the First Person Character
 	FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
-	AttachToComponent(Character->GetMesh1P(), AttachmentRules, FName(TEXT("GripPoint")));
+	AttachToComponent(Character->weaponAnchor, FAttachmentTransformRules::KeepRelativeTransform);
 	
 	// switch bHasRifle so the animation blueprint can switch to another animation set
 	Character->SetHasRifle(true, this);
@@ -111,5 +115,24 @@ void UTP_WeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		{
 			Subsystem->RemoveMappingContext(FireMappingContext);
 		}
+	}
+}
+void UTP_WeaponComponent::BeginPlay()
+{
+	// Call the base class  
+	Super::BeginPlay();
+	if (idleAnim) {
+		SetFlipbook(idleAnim);
+	}
+	this->OnFinishedPlaying.AddDynamic(this, &UTP_WeaponComponent::SetIdleAnim);
+
+
+}
+void UTP_WeaponComponent::SetIdleAnim()
+{
+	this->SetLooping(true);
+	if (idleAnim != nullptr)
+	{
+		this->SetFlipbook(idleAnim);
 	}
 }
