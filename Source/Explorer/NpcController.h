@@ -41,7 +41,7 @@ class EXPLORER_API ANpcController : public AAIController
 		FName AlertLocationKeyName = "AlertLocation";
 
 	UPROPERTY(EditDefaultsOnly, Category = "AI")
-		FName WillInvestigateKeyName = "willMoveToInvestigate";
+		FName WillInvestigateKeyName = "WillMoveToInvestigate";
 
 	UPROPERTY(EditDefaultsOnly, Category = "AI")
 		FName PatrolWaypointTypeKeyName = "CurrentPatrolPoint";

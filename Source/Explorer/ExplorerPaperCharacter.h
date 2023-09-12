@@ -32,6 +32,14 @@ enum class EAvatarState : uint8
 
 };
 
+UENUM(BlueprintType)
+enum class EEnemyMobility : uint8
+{
+	EM_GROUND		UMETA(DisplayName = "Ground Movement"),
+	EM_FLYING		UMETA(DisplayName = "Flying Movement"),
+	EM_IMMOBILE		UMETA(DisplayName = "Immobile"),
+
+};
 
 UENUM(BlueprintType)
 enum class EEnemyTypes : uint8

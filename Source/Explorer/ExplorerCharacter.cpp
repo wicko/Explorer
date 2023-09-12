@@ -104,7 +104,7 @@ void AExplorerCharacter::SwapWeapons(FWeapon newWeapon)
 	}
 	equippedWeapon = NewObject<UTP_WeaponComponent>(this, newWeapon.weapon);
 	equippedWeapon->RegisterComponent();
-	equippedWeapon->SetRelativeScale3D(FVector(0.1f, 0.1f, 0.1f));
+//	equippedWeapon->SetRelativeScale3D(FVector(0.1f, 0.1f, 0.1f));
 	equippedWeapon->AttachWeapon(this);
 }
 
